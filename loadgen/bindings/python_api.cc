@@ -287,9 +287,24 @@ void DestroyQDL(uintptr_t qdl) {
 }
 
 uintptr_t ConstructGroupedQSL(
-    pybind11::array_t<size_t> group_sizes, size_t performance_sample_count,
+    size_t performance_sample_count,
     LoadSamplesToRamCallback load_samples_to_ram_cb,
     UnloadSamplesFromRamCallback unload_samples_from_ram_cb) {
+  // Read group sizes from a text file if group_sizes is empty
+  pybind11::array_t<size_t> group_sizes;
+  std::ifstream infile("nuscenes_scene_lengths.txt");
+  if (!infile) {
+    throw std::runtime_error("Failed to open nuscenes_scene_lengths.txt");
+  }
+  std::vector<size_t> sizes;
+  size_t val;
+  while (infile >> val) {
+    sizes.push_back(val);
+  }
+  if (sizes.empty()) {
+    throw std::runtime_error("No group sizes found in nuscenes_scene_lengths.txt");
+  }
+  group_sizes = pybind11::array_t<size_t>(sizes.size(), sizes.data());
   GroupedQuerySampleLibraryTrampoline* qsl =
       new GroupedQuerySampleLibraryTrampoline(
           "PyQSL", performance_sample_count, load_samples_to_ram_cb,
