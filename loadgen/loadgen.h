@@ -75,7 +75,8 @@ void FirstTokenComplete(QuerySampleResponse* responses, size_t response_count,
 void StartTest(SystemUnderTest* sut, QuerySampleLibrary* qsl,
                const TestSettings& requested_settings,
                const LogSettings& log_settings,
-               const std::string audit_config_filename = "audit.config");
+               const std::string audit_config_filename = "audit.config",
+               const std::vector<size_t>& group_sizes = {});
 
 ///
 /// \brief Aborts the running test.

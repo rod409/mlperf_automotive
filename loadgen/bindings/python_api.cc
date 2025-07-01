@@ -17,6 +17,7 @@ limitations under the License.
 #define PYTHON_BINDINGS_H
 
 #include <functional>
+#include <fstream>
 
 #include "../loadgen.h"
 #include "../query_dispatch_library.h"
@@ -112,9 +113,6 @@ class QuerySampleLibraryTrampoline : public QuerySampleLibrary {
   const std::string& Name() override { return name_; }
   size_t TotalSampleCount() override { return total_sample_count_; }
   size_t PerformanceSampleCount() override { return performance_sample_count_; }
-  size_t GroupSize(size_t i) override { return 1; }
-  size_t GroupOf(size_t i) override { return i; }
-  size_t NumberOfGroups() override { return total_sample_count_; }
 
   void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
@@ -166,9 +164,9 @@ class GroupedQuerySampleLibraryTrampoline : public QuerySampleLibrary {
   const std::string& Name() override { return name_; }
   size_t TotalSampleCount() override { return total_sample_count_; }
   size_t PerformanceSampleCount() override { return performance_sample_count_; }
-  size_t GroupSize(size_t i) override { return group_sizes_[i]; }
-  size_t GroupOf(size_t i) override { return group_idx_[i]; }
-  size_t NumberOfGroups() override { return group_sizes_.size(); }
+  size_t GroupSize(size_t i) { return group_sizes_[i]; }
+  size_t GroupOf(size_t i) { return group_idx_[i]; }
+  size_t NumberOfGroups() { return group_sizes_.size(); }
 
   void LoadSamplesToRam(const std::vector<QuerySampleIndex>& samples) override {
     pybind11::gil_scoped_acquire gil_acquirer;
@@ -292,7 +290,7 @@ uintptr_t ConstructGroupedQSL(
     UnloadSamplesFromRamCallback unload_samples_from_ram_cb) {
   // Read group sizes from a text file if group_sizes is empty
   pybind11::array_t<size_t> group_sizes;
-  std::ifstream infile("nuscenes_scene_lengths.txt");
+  std::ifstream infile("/mlperf_automotive/automotive/camera-3d-detection/test_repo/mlperf_automotive/loadgen/nuscenes_scene_lengths.txt");
   if (!infile) {
     throw std::runtime_error("Failed to open nuscenes_scene_lengths.txt");
   }
@@ -343,18 +341,24 @@ void StartTestWithLogSettings(uintptr_t sut, uintptr_t qsl,
                     audit_config_filename);
 }
 
-void StartTestWithGroupedQSL(uintptr_t sut, uintptr_t qsl,
+void StartTestWithGroupedQSL(uintptr_t sut, uintptr_t qsl, pybind11::array_t<size_t> group_sizes,
                              mlperf::TestSettings test_settings,
                              const std::string& audit_config_filename) {
   pybind11::gil_scoped_release gil_releaser;
+  std::vector<size_t> group_sizes_;
   SystemUnderTestTrampoline* sut_cast =
       reinterpret_cast<SystemUnderTestTrampoline*>(sut);
   GroupedQuerySampleLibraryTrampoline* qsl_cast =
       reinterpret_cast<GroupedQuerySampleLibraryTrampoline*>(qsl);
   LogSettings default_log_settings;
   assert(test_settings.use_grouped_qsl);
+  auto buffer = group_sizes.request();
+  size_t* ptr = (size_t*)buffer.ptr;
+  for (ssize_t i = 0; i < group_sizes.shape()[0]; i++) {
+    group_sizes_.push_back(ptr[i]);
+  }
   mlperf::StartTest(sut_cast, qsl_cast, test_settings, default_log_settings,
-                    audit_config_filename);
+                    audit_config_filename, group_sizes_);
 }
 
 using ResponseCallback = std::function<void(QuerySampleResponse*)>;
