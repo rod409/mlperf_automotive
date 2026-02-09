@@ -4,8 +4,8 @@ import torch
 import onnxruntime as ort
 import numpy as np
 #from post_process import PostProcess
-from onnxruntime_extensions import onnx_op, PyOp, get_library_path
-from onnxruntime_extensions import PyOrtFunction
+#from onnxruntime_extensions import onnx_op, PyOp, get_library_path
+#from onnxruntime_extensions import PyOrtFunction
 import argparse
 import os
 
@@ -14,9 +14,9 @@ def to_numpy(tensor):
     return tensor.detach().cpu().numpy() if tensor.requires_grad else tensor.cpu().numpy()
 
 
-@onnx_op(op_type="Inverse", domain='ai.onnx.contrib', inputs=[PyOp.dt_float], outputs=[PyOp.dt_float])
-def inverse(x):
-    return np.linalg.inv(x).astype(np.float32)
+#@onnx_op(op_type="Inverse", domain='ai.onnx.contrib', inputs=[PyOp.dt_float], outputs=[PyOp.dt_float])
+#def inverse(x):
+#    return np.linalg.inv(x).astype(np.float32)
 
 def _generate_empty_zeros_tracks_trt():
         num_queries = 901
@@ -98,15 +98,15 @@ def main():
         args = parse_args()
         #inverse_op = OrtPyFunction.from_customop(op_type='InverseTRT', cpu_impl=inverse)
         session_options = ort.SessionOptions()
-        session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
-        session_options.register_custom_ops_library(get_library_path())
+        #session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_BASIC
+        #session_options.register_custom_ops_library(get_library_path())
         ort_sess = ort.InferenceSession(args.checkpoint, session_options=session_options)
         bevh = 50
         img_h = 256
         img_w = 416
         test_track_instances =[item*0 for item in _generate_empty_zeros_tracks_trt()] 
         input_shapes = dict(
-        prev_track_intances0=[-1, 512],  #901-1149
+        prev_track_intances0=[-1, 512], 
         prev_track_intances1=[-1, 3],
         prev_track_intances2=[-1, 256],
         prev_track_intances3=[-1],
@@ -140,21 +140,21 @@ def main():
         max_obj_id=[1],
     )
         inputs = {}
-        inputs['timestamp'] = 0
-        inputs['image_shape'] = np.array([img_h,img_w]).astype(np.float32)
+        inputs['timestamp'] = np.zeros((1), dtype=np.float32)
+        #inputs['image_shape'] = np.array([img_h,img_w]).astype(np.float32)
         inputs['prev_bev'] = np.zeros([bevh**2, 1, 256]).astype(np.float32)
         inputs['max_obj_id'] = np.array([0]).astype(np.int32)
-        inputs['prev_track_intances0'] = test_track_instances[0]
-        inputs['prev_track_intances1'] = test_track_instances[1]
-        inputs['prev_track_intances3'] = test_track_instances[3]
-        inputs['prev_track_intances4'] = test_track_instances[4]
-        inputs['prev_track_intances5'] = test_track_instances[5]
-        inputs['prev_track_intances6'] = test_track_instances[6]
-        inputs['prev_track_intances8'] = test_track_instances[8]
-        inputs['prev_track_intances9'] = test_track_instances[9]
-        inputs['prev_track_intances11'] = test_track_instances[11]
-        inputs['prev_track_intances12'] = test_track_instances[12]
-        inputs['prev_track_intances13'] = test_track_instances[13]
+        inputs['prev_track_intances0'] = test_track_instances[0].numpy().astype(np.float32)
+        inputs['prev_track_intances1'] = test_track_instances[1].numpy().astype(np.float32)
+        inputs['prev_track_intances3'] = test_track_instances[3].numpy().astype(np.int32)
+        inputs['prev_track_intances4'] = test_track_instances[4].numpy().astype(np.int32)
+        inputs['prev_track_intances5'] = test_track_instances[5].numpy().astype(np.int32)
+        inputs['prev_track_intances6'] = test_track_instances[6].numpy().astype(np.float32)
+        inputs['prev_track_intances8'] = test_track_instances[8].numpy().astype(np.float32)
+        inputs['prev_track_intances9'] = test_track_instances[9].numpy().astype(np.float32)
+        inputs['prev_track_intances11'] = test_track_instances[11].numpy().astype(np.float32)
+        inputs['prev_track_intances12'] = test_track_instances[12].numpy().astype(np.int32)
+        inputs['prev_track_intances13'] = test_track_instances[13].numpy().astype(np.float32)
         inputs['prev_l2g_r_mat'] = np.zeros((1, 3, 3), dtype=np.float32)
         inputs['prev_l2g_t'] = np.zeros((1, 3), dtype=np.float32)
         inputs['prev_timestamp'] = np.zeros([1]).astype(np.float32)
@@ -163,12 +163,15 @@ def main():
         inputs['img'] = np.random.randn(1, 6, 3, img_h, img_w).astype(np.float32)
         inputs['img_metas_can_bus'] = np.random.randn(18).astype(np.float32)
         inputs['img_metas_lidar2img'] = np.random.randn(1, 6, 4, 4).astype(np.float32)
-        inputs['commmand'] = np.random.randn(1).astype(np.int32)
+        inputs['command'] = np.random.randn(1).astype(np.float32)
+        inputs['l2g_inv'] = np.random.randn(1, 3, 3).astype(np.float32)
+        inputs['l2g_r_mat'] = np.random.randn(1, 3, 3).astype(np.float32)
+        inputs['l2g_t'] = np.random.randn(1, 3).astype(np.float32)
         #test_func = PyOrtFunction(args.checkpoint)
         #result = test_func(inputs)
-        #result = ort_sess.run(None, inputs)
-        model_func = PyOrtFunction(args.checkpoint)
-        result = model_func(inputs)
+        result = ort_sess.run(None, inputs)
+        #model_func = PyOrtFunction(args.checkpoint)
+        #result = model_func(inputs)
         print(len(result))
 
 if __name__ == '__main__':
