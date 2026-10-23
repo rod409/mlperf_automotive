@@ -19,9 +19,9 @@ class Zod(Dataset):
         return self.preloaded[index]
 
     def load_item(self, index, prefix='val'):
-        file_path = os.path.join(self.data_root, f'{prefix}_{index}.npy')
+        file_path = os.path.join(self.data_root, f'{prefix}_{index}.pkl')
         with open(file_path, 'rb') as f:
-            item = np.load(f)
+            item = pickle.load(f)
         return item 
 
     def load_query_samples(self, sample_list):
@@ -79,27 +79,3 @@ class PostProcessZod:
     def finalize(self, result_dict, ds=None):
 
         return result_dict
-
-'''class PostProcessZod:
-    def __init__(
-        self,  # Postprocess parameters
-    ):
-        self.content_ids = []
-        self.results = []
-
-    def add_results(self, results):
-        self.results.extend(results)
-
-    def __call__(self, results, content_id, inputs, result_dict):
-        self.content_ids.extend(content_id)
-        processed_results = []
-        for idx in range(len(content_id)):
-            processed_results.append(torch.stack(results).cpu())
-        return processed_results
-
-    def start(self):
-        self.results = []
-
-    def finalize(self, result_dict, ds=None):
-
-        return result_dict'''

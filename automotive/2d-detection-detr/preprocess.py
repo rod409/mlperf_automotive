@@ -1,6 +1,7 @@
 import os
 import json
 import argparse
+import pickle
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import numpy as np
 from PIL import Image
@@ -36,10 +37,11 @@ def process_single_image(idx, img_entry, output_dir, resolution):
         # 5. Transpose HWC -> CHW
         img_tensor = np.transpose(img_tensor, (2, 0, 1))
 
-        # 6. Save binary array using zero-based index as filename format: val_{idx}.npy
-        out_name = f"val_{idx}.npy"
+        # 6. Save binary array as a pickle file: val_{idx}.pkl
+        out_name = f"val_{idx}.pkl"
         out_path = os.path.join(output_dir, out_name)
-        np.save(out_path, img_tensor)
+        with open(out_path, "wb") as f:
+            pickle.dump(img_tensor, f)
 
         # Return metadata tuple keyed by index, referencing original COCO ID
         meta_item = (
@@ -69,7 +71,7 @@ def main():
         "--output_dir", 
         type=str, 
         required=True, 
-        help="Where to save .npy files"
+        help="Where to save .pkl files"
     )
     parser.add_argument(
         "--resolution", 
