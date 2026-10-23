@@ -12,10 +12,10 @@ MEAN = np.array([0.485, 0.456, 0.406], dtype=np.float32)
 STD = np.array([0.229, 0.224, 0.225], dtype=np.float32)
 
 
-def process_single_image(idx, img_entry, output_dir, resolution):
+def process_single_image(idx, img_entry, output_dir, resolution, zod_root):
     """Worker task to process a single image frame using a 0-based index."""
     img_id = img_entry["id"]
-    img_path = img_entry["file_name"]
+    img_path = os.path.join(zod_root, img_entry["file_name"])
 
     if not os.path.exists(img_path):
         return None, f"Warning: Could not find image at {img_path}, skipping."
@@ -62,6 +62,12 @@ def process_single_image(idx, img_entry, output_dir, resolution):
 def main():
     parser = argparse.ArgumentParser(description="Preprocess COCO validation dataset for MLPerf RF-DETR")
     parser.add_argument(
+        "--zod_root",
+        type=str,
+        required=True,
+        help="Path to the ZOD dataset root directory"
+    )
+    parser.add_argument(
         "--annotation_file", 
         type=str, 
         required=True, 
@@ -103,7 +109,7 @@ def main():
     # Parallelize processing across CPU cores with zero-based index mapping
     with ProcessPoolExecutor(max_workers=args.workers) as executor:
         futures = [
-            executor.submit(process_single_image, idx, img_entry, args.output_dir, args.resolution)
+            executor.submit(process_single_image, idx, img_entry, args.output_dir, args.resolution, args.zod_root)
             for idx, img_entry in enumerate(images)
         ]
 
