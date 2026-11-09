@@ -13,6 +13,7 @@ def sigmoid(x):
 class BackendOnnx():
     def __init__(self, checkpoint, device='cpu'):
         self.checkpoint = checkpoint
+        self.device = device
 
     def version(self):
         return torch.__version__
@@ -21,8 +22,13 @@ class BackendOnnx():
         return "onnx-SUT"
 
     def load(self):
-        self.ort_sess = ort.InferenceSession(self.checkpoint)
+        if self.device == 'cuda':
+            providers = ['CUDAExecutionProvider', 'CPUExecutionProvider']
+        else:
+            providers = ['CPUExecutionProvider']
+        self.ort_sess = ort.InferenceSession(self.checkpoint, providers=providers)
         self.input_img_name = self.ort_sess.get_inputs()[0].name
+
         return self
 
     def predict(self, inputs):
